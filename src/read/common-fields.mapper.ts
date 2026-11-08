@@ -39,9 +39,22 @@ export function mapAudioTags(common: ICommonTagsResult, native: NativeTagMap | u
     work: common.work || getNativeTagValue(native, 'WORK') || getNativeTagValue(native, 'TXXX:WORK') || null,
     originalReleaseDate: common.originaldate || common.originalyear?.toString() || null,
     copyright: common.copyright || null,
-    rating: common.rating?.[0]?.rating ? Math.round(common.rating[0].rating * 100) : null,
+    rating: mapRating(common, native),
     lyrics: common.lyrics?.[0]?.text || null,
     compilation: common.compilation || false,
     gapless: common.gapless || false
   }
+}
+
+function mapRating(common: ICommonTagsResult, native: NativeTagMap | undefined): number | null {
+  const score = common.rating?.[0]?.rating
+  if (typeof score === 'number') return Math.round(score * 100)
+
+  // APEv2 has no common rating mapping, so the writer stores a 0-100 RATING
+  // text item. Read it back through the native fallback.
+  const nativeRating = getNativeTagValue(native, 'RATING')
+  if (nativeRating === undefined) return null
+
+  const value = Number(nativeRating)
+  return Number.isFinite(value) && value >= 0 && value <= 100 ? Math.round(value) : null
 }
